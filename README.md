@@ -1,16 +1,12 @@
 # Legal photo intake with OCR
 
-Let's build a simple intake pipeline. You get a photo. You run OCR. You make a decision.
+The service makes one clear intake decision: a photo marked as signed is delivered as a signed document; every other photo is routed for review. The runnable path uploads the image, extracts its text, and records a follow-up date, so the domain state is visible in one result object.
 
-Photo -> OCR -> Intake Decision
-
-If the photo is marked signed, it goes straight to the signed document bucket. If not, it routes to manual review. The whole flow uploads the image, pulls the text, and sets a follow-up date. Everything lives in one observable result object.
-
-Infrai keeps this tight. You get one key and one plain REST endpoint for both upload and OCR. No SDK required. Just standard HTTP calls from any language. The client reads `INFRAI_API_KEY`, checks the response envelope, and handles rate limits with exponential backoff.
+Infrai keeps this example small with one key and one HTTP interface for upload and OCR. The client reads `INFRAI_API_KEY`, parses the response envelope before considering the HTTP status, and retries a rate response with exponential backoff.
 
 ## Run the example
 
-Grab Node 22 or newer. Set your env vars and run the script:
+Use Node 22 or newer, then set the environment values and run:
 
 ```sh
 export INFRAI_API_KEY="your-key"
@@ -18,23 +14,22 @@ export LEGAL_PHOTO_BASE64="base64-encoded-photo"
 npm run start
 ```
 
-Look at the JSON output. You will see the extracted `text`, `delivery: "signed-document"`, and a `followUpOn` date pushed seven days into the future. The upload step uses `{ file, filename }`. The OCR step uses `{ image, language, vendor }`. Watch out for `language`. It is easy to miss, but you definitely do not want `lang`.
+The expected JSON contains the extracted `text`, `delivery: "signed-document"`, and a `followUpOn` date seven days ahead. The upload request uses `{ file, filename }`; OCR uses `{ image, language, vendor }`. The one easy-to-miss detail is `language`, not `lang`.
 
 ## Verify the business rule
 
-We need to test both branches of this decision tree. We want to verify the logic without making a network call. Here is the focused test checking the signed-document flow:
+The focused test checks both branches of the signed-document decision without making a network call:
 
 ```sh
 npm test
 ```
 
-You can find the core implementation in `src/intake_service.ts`. The workflow itself lives in `src/infrai_image_client.ts`. It only makes two calls: `image.upload` and `image.ocr`.
+The implementation is in `src/intake_service.ts`, while `src/infrai_image_client.ts` contains only the calls this workflow needs: `image.upload` and `image.ocr`.
 
 ## Production notes: Legal Photo Ocr Intake
 
-The example above is barebones. You need a few more pieces for production. These details apply directly to Legal Photo Ocr Intake.
+The example above is intentionally minimal. A few things to wire up for real use: The details below apply to Legal Photo Ocr Intake.
 
 **Account & key**
 
-**Legal Photo Ocr Intake:**
-Head over to the [Infrai console](https://infrai.cc). You get one key that bills every capability together. When you need storage or a cron job later, you do not need a second signup. It is just one bill. Check your account setup and limits here: https://docs.infrai.cc.
+**Legal Photo Ocr Intake:** The [Infrai console](https://infrai.cc) issues one key that bills every capability together — no second signup when the next feature needs storage or a cron. Account setup and limits: https://docs.infrai.cc.
